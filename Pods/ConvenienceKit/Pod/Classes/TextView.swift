@@ -8,9 +8,9 @@
 
 import UIKit
 
-public class TextView : UITextView {
+open class TextView : UITextView {
 
-  public var placeholderText: String = "Tap to edit"
+  open var placeholderText: String = "Tap to edit"
   
   public required init(coder aDecoder: NSCoder) {
     super.init(coder: aDecoder)!
@@ -22,25 +22,25 @@ public class TextView : UITextView {
     initialize()
   }
   
-  private func initialize() {
-    NSNotificationCenter.defaultCenter().addObserver(self,
-      selector: "textViewDidBeginEditing:",
-      name: UITextViewTextDidBeginEditingNotification,
+  fileprivate func initialize() {
+    NotificationCenter.default.addObserver(self,
+      selector: #selector(UITextViewDelegate.textViewDidBeginEditing(_:)),
+      name: NSNotification.Name.UITextViewTextDidBeginEditing,
       object: self)
     
-    NSNotificationCenter.defaultCenter().addObserver(self,
-      selector: "textViewDidEndEditing:",
-      name: UITextViewTextDidEndEditingNotification,
+    NotificationCenter.default.addObserver(self,
+      selector: #selector(UITextViewDelegate.textViewDidEndEditing(_:)),
+      name: NSNotification.Name.UITextViewTextDidEndEditing,
       object: self)
   }
   
   deinit {
-    NSNotificationCenter.defaultCenter().removeObserver(self)
+    NotificationCenter.default.removeObserver(self)
   }
   
-  override public var text: String! {
+  override open var text: String! {
     didSet {
-      if let text = text where text == "" {
+      if let text = text , text == "" {
         if (showsPlaceholderText == nil) {
           showsPlaceholderText = true
         }
@@ -52,10 +52,10 @@ public class TextView : UITextView {
     }
   }
   
-  public var textValue:String {
+  open var textValue:String {
     get {
       if let showsPlaceholderText = showsPlaceholderText
-        where showsPlaceholderText == true {
+        , showsPlaceholderText == true {
           return ""
       } else {
         return text
@@ -63,28 +63,28 @@ public class TextView : UITextView {
     }
   }
   
-  public private (set) var showsPlaceholderText: Bool? {
+  open fileprivate (set) var showsPlaceholderText: Bool? {
     didSet {
       if let showsPlaceholderText = showsPlaceholderText {
         if (showsPlaceholderText == true) {
           textColor = placeHolderTextColor
           text = placeholderText
         } else {
-          textColor = UIColor.blackColor()
+          textColor = UIColor.black
         }
       }
     }
   }
   
-  @IBInspectable public var placeHolderTextColor: UIColor = UIColor.lightGrayColor()
+  @IBInspectable open var placeHolderTextColor: UIColor = UIColor.lightGray
   
-  public func textViewDidEndEditing(notification: NSNotification) {
+  open func textViewDidEndEditing(_ notification: Notification) {
     self.showsPlaceholderText = (self.text.characters.count == 0)
   }
   
-  public func textViewDidBeginEditing(notification: NSNotification) {
+  open func textViewDidBeginEditing(_ notification: Notification) {
     if let showsPlaceholderText = showsPlaceholderText
-      where showsPlaceholderText == true {
+      , showsPlaceholderText == true {
         self.showsPlaceholderText = false
         text = ""
     }
