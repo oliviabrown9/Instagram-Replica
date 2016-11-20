@@ -2,8 +2,8 @@
 //  MakestagramTests.swift
 //  MakestagramTests
 //
-//  Created by Benjamin Encz on 5/15/15.
-//  Copyright (c) 2015 Make School. All rights reserved.
+//  Created by Olivia Brown on 6/29/16.
+//  Copyright © Olivia Brown for Make School. All rights reserved.
 //
 
 import UIKit

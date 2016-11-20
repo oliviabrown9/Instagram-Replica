@@ -2,8 +2,8 @@
 //  AppDelegate.swift
 //  Makestagram
 //
-//  Created by Olivia on 6/22/16.
-//  Copyright (c) 2015 Make School. All rights reserved.
+//  Created by Olivia Brown on 6/21/16.
+//  Copyright © Olivia Brown for Make School. All rights reserved.
 //
 
 import UIKit

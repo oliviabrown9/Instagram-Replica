@@ -2,8 +2,8 @@
 //  FriendSearchViewController.swift
 //  Makestagram
 //
-//  Created by Olivia on 6/22/16.
-//  Copyright © 2016 Make School. All rights reserved.
+//  Created by Olivia Brown on 6/24/16.
+//  Copyright © Olivia Brown for Make School. All rights reserved.
 //
 
 import UIKit

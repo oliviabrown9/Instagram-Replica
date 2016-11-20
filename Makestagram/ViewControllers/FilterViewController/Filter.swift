@@ -2,8 +2,8 @@
 //  Filter.swift
 //  Makestagram
 //
-//  Created by Benjamin Encz on 4/9/15.
-//  Copyright (c) 2015 Make School. All rights reserved.
+//  Created by Olivia Brown on 6/26/16.
+//  Copyright © Olivia Brown for Make School. All rights reserved.
 //
 
 import UIKit
