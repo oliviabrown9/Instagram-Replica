@@ -9,44 +9,44 @@
 import UIKit
 
 @objc(KeyboardNotificationHandler)
-open class KeyboardNotificationHandler: NSObject {
+public class KeyboardNotificationHandler: NSObject {
   
   public typealias KeyboardHandlerCallback = (CGFloat) -> ()
   
-  open var keyboardWillBeHiddenHandler: KeyboardHandlerCallback?
-  open var keyboardWillBeShownHandler:  KeyboardHandlerCallback?
+  public var keyboardWillBeHiddenHandler: KeyboardHandlerCallback?
+  public var keyboardWillBeShownHandler:  KeyboardHandlerCallback?
   
   public required override init() {
     super.init()
     
-    NotificationCenter.default.addObserver(self,
-      selector: #selector(KeyboardNotificationHandler.keyboardWillBeShown(_:)),
-      name: NSNotification.Name(rawValue: "UIKeyboardWillShowNotification"),
+    NSNotificationCenter.defaultCenter().addObserver(self,
+      selector: "keyboardWillBeShown:",
+      name: "UIKeyboardWillShowNotification",
       object: nil
     )
     
-    NotificationCenter.default.addObserver(self,
-      selector: #selector(KeyboardNotificationHandler.keyboardWillBeHidden(_:)),
-      name: NSNotification.Name(rawValue: "UIKeyboardWillHideNotification"),
+    NSNotificationCenter.defaultCenter().addObserver(self,
+      selector: "keyboardWillBeHidden:",
+      name: "UIKeyboardWillHideNotification",
       object: nil
     )
   }
   
   deinit {
-    NotificationCenter.default.removeObserver(self)
+    NSNotificationCenter.defaultCenter().removeObserver(self)
   }
   
-  open func keyboardWillBeShown(_ notification: Notification) {
+  public func keyboardWillBeShown(notification: NSNotification) {
     invokeHandler(notification, callback: keyboardWillBeShownHandler)
   }
   
-  open func keyboardWillBeHidden(_ notification: Notification) {
+  public func keyboardWillBeHidden(notification: NSNotification) {
     invokeHandler(notification, callback: keyboardWillBeHiddenHandler)
   }
   
-  fileprivate func invokeHandler(_ notification: Notification, callback: KeyboardHandlerCallback?) {
-    if let info = (notification as NSNotification).userInfo, let callback = callback {
-      let keyboardFrame: CGRect = (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).cgRectValue
+  private func invokeHandler(notification: NSNotification, callback: KeyboardHandlerCallback?) {
+    if let info = notification.userInfo, callback = callback {
+      let keyboardFrame: CGRect = (info[UIKeyboardFrameEndUserInfoKey] as! NSValue).CGRectValue()
         callback(keyboardFrame.height)
     }
   }

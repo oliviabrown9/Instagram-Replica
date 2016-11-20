@@ -27,101 +27,101 @@ import UIKit
 @objc class UIControlBondHelper: NSObject
 {
   weak var control: UIControl?
-  let sink: (UIControlEvents) -> ()
+  let sink: UIControlEvents -> ()
   
-  init(control: UIControl, sink: @escaping (UIControlEvents) -> ()) {
+  init(control: UIControl, sink: UIControlEvents -> ()) {
     self.control = control
     self.sink = sink
     super.init()
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDown), for: UIControlEvents.touchDown)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDownRepeat), for: UIControlEvents.touchDownRepeat)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDragInside), for: UIControlEvents.touchDragInside)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDragOutside), for: UIControlEvents.touchDragOutside)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDragEnter), for: UIControlEvents.touchDragEnter)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchDragExit), for: UIControlEvents.touchDragExit)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchUpInside), for: UIControlEvents.touchUpInside)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchUpOutside), for: UIControlEvents.touchUpOutside)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerTouchCancel), for: UIControlEvents.touchCancel)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerValueChanged), for: UIControlEvents.valueChanged)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerEditingDidBegin), for: UIControlEvents.editingDidBegin)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerEditingChanged), for: UIControlEvents.editingChanged)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerEditingDidEnd), for: UIControlEvents.editingDidEnd)
-    control.addTarget(self, action: #selector(UIControlBondHelper.eventHandlerEditingDidEndOnExit), for: UIControlEvents.editingDidEndOnExit)
+    control.addTarget(self, action: Selector("eventHandlerTouchDown"), forControlEvents: UIControlEvents.TouchDown)
+    control.addTarget(self, action: Selector("eventHandlerTouchDownRepeat"), forControlEvents: UIControlEvents.TouchDownRepeat)
+    control.addTarget(self, action: Selector("eventHandlerTouchDragInside"), forControlEvents: UIControlEvents.TouchDragInside)
+    control.addTarget(self, action: Selector("eventHandlerTouchDragOutside"), forControlEvents: UIControlEvents.TouchDragOutside)
+    control.addTarget(self, action: Selector("eventHandlerTouchDragEnter"), forControlEvents: UIControlEvents.TouchDragEnter)
+    control.addTarget(self, action: Selector("eventHandlerTouchDragExit"), forControlEvents: UIControlEvents.TouchDragExit)
+    control.addTarget(self, action: Selector("eventHandlerTouchUpInside"), forControlEvents: UIControlEvents.TouchUpInside)
+    control.addTarget(self, action: Selector("eventHandlerTouchUpOutside"), forControlEvents: UIControlEvents.TouchUpOutside)
+    control.addTarget(self, action: Selector("eventHandlerTouchCancel"), forControlEvents: UIControlEvents.TouchCancel)
+    control.addTarget(self, action: Selector("eventHandlerValueChanged"), forControlEvents: UIControlEvents.ValueChanged)
+    control.addTarget(self, action: Selector("eventHandlerEditingDidBegin"), forControlEvents: UIControlEvents.EditingDidBegin)
+    control.addTarget(self, action: Selector("eventHandlerEditingChanged"), forControlEvents: UIControlEvents.EditingChanged)
+    control.addTarget(self, action: Selector("eventHandlerEditingDidEnd"), forControlEvents: UIControlEvents.EditingDidEnd)
+    control.addTarget(self, action: Selector("eventHandlerEditingDidEndOnExit"), forControlEvents: UIControlEvents.EditingDidEndOnExit)
   }
   
   func eventHandlerTouchDown() {
-    sink(.touchDown)
+    sink(.TouchDown)
   }
   
   func eventHandlerTouchDownRepeat() {
-    sink(.touchDownRepeat)
+    sink(.TouchDownRepeat)
   }
   
   func eventHandlerTouchDragInside() {
-    sink(.touchDragInside)
+    sink(.TouchDragInside)
   }
   
   func eventHandlerTouchDragOutside() {
-    sink(.touchDragOutside)
+    sink(.TouchDragOutside)
   }
   
   func eventHandlerTouchDragEnter() {
-    sink(.touchDragEnter)
+    sink(.TouchDragEnter)
   }
   
   func eventHandlerTouchDragExit() {
-    sink(.touchDragExit)
+    sink(.TouchDragExit)
   }
   
   func eventHandlerTouchUpInside() {
-    sink(.touchUpInside)
+    sink(.TouchUpInside)
   }
   
   func eventHandlerTouchUpOutside() {
-    sink(.touchUpOutside)
+    sink(.TouchUpOutside)
   }
   
   func eventHandlerTouchCancel() {
-    sink(.touchCancel)
+    sink(.TouchCancel)
   }
   
   func eventHandlerValueChanged() {
-    sink(.valueChanged)
+    sink(.ValueChanged)
   }
   
   func eventHandlerEditingDidBegin() {
-    sink(.editingDidBegin)
+    sink(.EditingDidBegin)
   }
   
   func eventHandlerEditingChanged() {
-    sink(.editingChanged)
+    sink(.EditingChanged)
   }
   
   func eventHandlerEditingDidEnd() {
-    sink(.editingDidEnd)
+    sink(.EditingDidEnd)
   }
   
   func eventHandlerEditingDidEndOnExit() {
-    sink(.editingDidEndOnExit)
+    sink(.EditingDidEndOnExit)
   }
   
   deinit {
-    control?.removeTarget(self, action: nil, for: UIControlEvents.allEvents)
+    control?.removeTarget(self, action: nil, forControlEvents: UIControlEvents.AllEvents)
   }
 }
 
 extension UIControl {
   
-  fileprivate struct AssociatedKeys {
+  private struct AssociatedKeys {
     static var ControlEventKey = "bnd_ControlEventKey"
     static var ControlBondHelperKey = "bnd_ControlBondHelperKey"
   }
   
   public var bnd_controlEvent: EventProducer<UIControlEvents> {
-    if let bnd_controlEvent: AnyObject = objc_getAssociatedObject(self, &AssociatedKeys.ControlEventKey) as AnyObject? {
+    if let bnd_controlEvent: AnyObject = objc_getAssociatedObject(self, &AssociatedKeys.ControlEventKey) {
       return bnd_controlEvent as! EventProducer<UIControlEvents>
     } else {
-      var capturedSink: ((UIControlEvents) -> ())! = nil
+      var capturedSink: (UIControlEvents -> ())! = nil
       
       let bnd_controlEvent = EventProducer<UIControlEvents> { sink in
         capturedSink = sink

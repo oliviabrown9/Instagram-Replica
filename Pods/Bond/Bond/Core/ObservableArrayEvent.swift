@@ -26,43 +26,43 @@
 /// ObservableArray event encapsulates current state of the array, as well
 /// as the operation that has triggered an event.
 public protocol ObservableArrayEventType {
-  associatedtype ObservableArrayEventSequenceType: Sequence
+  typealias ObservableArrayEventSequenceType: SequenceType
   var sequence: ObservableArrayEventSequenceType { get }
-  var operation: ObservableArrayOperation<ObservableArrayEventSequenceType.Iterator.Element> { get }
+  var operation: ObservableArrayOperation<ObservableArrayEventSequenceType.Generator.Element> { get }
 }
 
 /// A concrete array event type.
-public struct ObservableArrayEvent<ObservableArrayEventSequenceType: Sequence>: ObservableArrayEventType {
+public struct ObservableArrayEvent<ObservableArrayEventSequenceType: SequenceType>: ObservableArrayEventType {
   public let sequence: ObservableArrayEventSequenceType
-  public let operation: ObservableArrayOperation<ObservableArrayEventSequenceType.Iterator.Element>
+  public let operation: ObservableArrayOperation<ObservableArrayEventSequenceType.Generator.Element>
 }
 
 /// Represents an operation that can be applied to a ObservableArray.
 /// Note: Nesting of the .Batch operations is not supported at the moment.
 public indirect enum ObservableArrayOperation<ElementType> {
-  case insert(elements: [ElementType], fromIndex: Int)
-  case update(elements: [ElementType], fromIndex: Int)
-  case remove(range: CountableRange<Int>)
-  case reset(array: [ElementType])
-  case batch([ObservableArrayOperation<ElementType>])
+  case Insert(elements: [ElementType], fromIndex: Int)
+  case Update(elements: [ElementType], fromIndex: Int)
+  case Remove(range: Range<Int>)
+  case Reset(array: [ElementType])
+  case Batch([ObservableArrayOperation<ElementType>])
 }
 
 /// A array event change set represents a description of the change that 
 /// the array event operation does to a array in a way suited for application
 /// to the UIKit collection views like UITableView or UICollectionView
 public enum ObservableArrayEventChangeSet {
-  case inserts(Set<Int>)
-  case updates(Set<Int>)
-  case deletes(Set<Int>)
+  case Inserts(Set<Int>)
+  case Updates(Set<Int>)
+  case Deletes(Set<Int>)
 }
 
 public func ==(lhs: ObservableArrayEventChangeSet, rhs: ObservableArrayEventChangeSet) -> Bool {
   switch (lhs, rhs) {
-  case (.inserts(let l), .inserts(let r)):
+  case (.Inserts(let l), .Inserts(let r)):
     return l == r
-  case (.updates(let l), .updates(let r)):
+  case (.Updates(let l), .Updates(let r)):
     return l == r
-  case (.deletes(let l), .deletes(let r)):
+  case (.Deletes(let l), .Deletes(let r)):
     return l == r
   default:
     return false
@@ -72,27 +72,27 @@ public func ==(lhs: ObservableArrayEventChangeSet, rhs: ObservableArrayEventChan
 public extension ObservableArrayOperation {
   
   /// Maps elements encapsulated in the operation.
-  public func map<X>(_ transform: (ElementType) -> X) -> ObservableArrayOperation<X> {
+  public func map<X>(transform: ElementType -> X) -> ObservableArrayOperation<X> {
     switch self {
-    case .reset(let array):
-      return .reset(array: array.map(transform))
-    case .insert(let elements, let fromIndex):
-      return .insert(elements: elements.map(transform), fromIndex: fromIndex)
-    case .update(let elements, let fromIndex):
-      return .update(elements: elements.map(transform), fromIndex: fromIndex)
-    case .remove(let range):
-      return .remove(range: range)
-    case .batch(let operations):
-      return .batch(operations.map{ $0.map(transform) })
+    case .Reset(let array):
+      return .Reset(array: array.map(transform))
+    case .Insert(let elements, let fromIndex):
+      return .Insert(elements: elements.map(transform), fromIndex: fromIndex)
+    case .Update(let elements, let fromIndex):
+      return .Update(elements: elements.map(transform), fromIndex: fromIndex)
+    case .Remove(let range):
+      return .Remove(range: range)
+    case .Batch(let operations):
+      return .Batch(operations.map{ $0.map(transform) })
     }
   }
   
-  public func filter(_ includeElement: (ElementType) -> Bool, pointers: inout [Int]) -> ObservableArrayOperation<ElementType>? {
+  public func filter(includeElement: ElementType -> Bool, inout pointers: [Int]) -> ObservableArrayOperation<ElementType>? {
     
     switch self {
-    case .insert(let elements, let fromIndex):
+    case .Insert(let elements, let fromIndex):
       
-      for (index, element) in pointers.enumerated() {
+      for (index, element) in pointers.enumerate() {
         if element >= fromIndex {
           pointers[index] = element + elements.count
         }
@@ -101,7 +101,7 @@ public extension ObservableArrayOperation {
       var insertedIndices: [Int] = []
       var insertedElements: [ElementType] = []
       
-      for (index, element) in elements.enumerated() {
+      for (index, element) in elements.enumerate() {
         if includeElement(element) {
           insertedIndices.append(fromIndex + index)
           insertedElements.append(element)
@@ -110,33 +110,33 @@ public extension ObservableArrayOperation {
       
       if insertedIndices.count > 0 {
         let insertionPoint = startingIndexForIndex(fromIndex, forPointers: pointers)
-        pointers.insert(contentsOf: insertedIndices, at: insertionPoint)
-        return .insert(elements: insertedElements, fromIndex: insertionPoint)
+        pointers.insertContentsOf(insertedIndices, at: insertionPoint)
+        return .Insert(elements: insertedElements, fromIndex: insertionPoint)
       }
       
-    case .update(let elements, let fromIndex):
+    case .Update(let elements, let fromIndex):
       
       var operations: [ObservableArrayOperation<ElementType>] = []
       
-      for (index, element) in elements.enumerated() {
+      for (index, element) in elements.enumerate() {
         let realIndex = fromIndex + index
         
         // if element on this index is currently included in filtered array
-        if let location = pointers.index(of: realIndex) {
+        if let location = pointers.indexOf(realIndex) {
           if includeElement(element) {
             // update
-            operations.append(.update(elements: [element], fromIndex: location))
+            operations.append(.Update(elements: [element], fromIndex: location))
           } else {
             // remove
-            pointers.remove(at: location)
-            operations.append(.remove(range: location..<location+1))
+            pointers.removeAtIndex(location)
+            operations.append(.Remove(range: location..<location+1))
           }
         } else { // element in this index is currently NOT included
           if includeElement(element) {
             // insert
             let insertionPoint = startingIndexForIndex(realIndex, forPointers: pointers)
-            pointers.insert(realIndex, at: insertionPoint)
-            operations.append(.insert(elements: [element], fromIndex: insertionPoint))
+            pointers.insert(realIndex, atIndex: insertionPoint)
+            operations.append(.Insert(elements: [element], fromIndex: insertionPoint))
           } else {
             // not contained, not inserted - do nothing
           }
@@ -146,17 +146,17 @@ public extension ObservableArrayOperation {
       if operations.count == 1 {
         return operations.first!
       } else if operations.count > 1 {
-        return .batch(operations)
+        return .Batch(operations)
       }
       
-    case .remove(let range):
+    case .Remove(let range):
       
       var startIndex = -1
       var endIndex = -1
       
-      for (index, element) in pointers.enumerated() {
-        if element >= range.lowerBound {
-          if element < range.upperBound {
+      for (index, element) in pointers.enumerate() {
+        if element >= range.startIndex {
+          if element < range.endIndex {
             if startIndex < 0 {
               startIndex = index
               endIndex = index + 1
@@ -170,16 +170,16 @@ public extension ObservableArrayOperation {
       }
       
       if startIndex >= 0 {
-        let removedRange = (startIndex ..< endIndex)
-        pointers.removeSubrange(removedRange)
-        return .remove(range: removedRange)
+        let removedRange = Range(start: startIndex, end: endIndex)
+        pointers.removeRange(removedRange)
+        return .Remove(range: removedRange)
       }
       
-    case .reset(let array):
+    case .Reset(let array):
       pointers = pointersFromSequence(array, includeElement: includeElement)
-      return .reset(array: array.filter(includeElement))
+      return .Reset(array: array.filter(includeElement))
       
-    case .batch(let operations):
+    case .Batch(let operations):
       
       var filteredOperations: [ObservableArrayOperation<ElementType>] = []
       
@@ -192,7 +192,7 @@ public extension ObservableArrayOperation {
       if filteredOperations.count == 1 {
         return filteredOperations.first!
       } else if filteredOperations.count > 0 {
-        return .batch(filteredOperations)
+        return .Batch(filteredOperations)
       }
     }
     
@@ -202,23 +202,23 @@ public extension ObservableArrayOperation {
   /// Generates the `ObservableArrayEventChangeSet` representation of the operation.
   public func changeSet() -> ObservableArrayEventChangeSet {
     switch self {
-    case .insert(let elements, let fromIndex):
-      return .inserts(Set(fromIndex..<fromIndex+elements.count))
-    case .update(let elements, let fromIndex):
-      return .updates(Set(fromIndex..<fromIndex+elements.count))
-    case .remove(let range):
-      return .deletes(Set(range))
-    case .reset:
+    case .Insert(let elements, let fromIndex):
+      return .Inserts(Set(fromIndex..<fromIndex+elements.count))
+    case .Update(let elements, let fromIndex):
+      return .Updates(Set(fromIndex..<fromIndex+elements.count))
+    case .Remove(let range):
+      return .Deletes(Set(range))
+    case .Reset:
       fallthrough
-    case .batch:
+    case .Batch:
       fatalError("Dear Sir/Madam, I cannot generate changeset for \(self) operation.")
     }
   }
 }
 
-internal func pointersFromSequence<S: Sequence>(_ sequence: S, includeElement: (S.Iterator.Element) -> Bool) -> [Int] {
+internal func pointersFromSequence<S: SequenceType>(sequence: S, includeElement: S.Generator.Element -> Bool) -> [Int] {
   var pointers: [Int] = []
-  for (index, element) in sequence.enumerated() {
+  for (index, element) in sequence.enumerate() {
     if includeElement(element) {
       pointers.append(index)
     }
@@ -226,9 +226,9 @@ internal func pointersFromSequence<S: Sequence>(_ sequence: S, includeElement: (
   return pointers
 }
 
-internal func startingIndexForIndex(_ x: Int, forPointers pointers: [Int]) -> Int {
+internal func startingIndexForIndex(x: Int, forPointers pointers: [Int]) -> Int {
   var idx: Int = -1
-  for (index, element) in pointers.enumerated() {
+  for (index, element) in pointers.enumerate() {
     if element < x {
       idx = index
     } else {
@@ -238,23 +238,23 @@ internal func startingIndexForIndex(_ x: Int, forPointers pointers: [Int]) -> In
   return idx + 1
 }
 
-public func operationOffset<T>(_ operation: ObservableArrayOperation<T>) -> Int {
+public func operationOffset<T>(operation: ObservableArrayOperation<T>) -> Int {
   switch operation {
-  case .insert(let elements, _):
+  case .Insert(let elements, _):
     return elements.count
-  case .remove(let range):
+  case .Remove(let range):
     return -range.count
   default:
     return 0
   }
 }
 
-public func operationStartIndex<T>(_ operation: ObservableArrayOperation<T>) -> Int {
+public func operationStartIndex<T>(operation: ObservableArrayOperation<T>) -> Int {
   switch operation {
-  case .insert(_, let fromIndex):
+  case .Insert(_, let fromIndex):
     return fromIndex
-  case .remove(let range):
-    return range.lowerBound
+  case .Remove(let range):
+    return range.startIndex
   default:
     return 0
   }
@@ -279,27 +279,27 @@ public func operationStartIndex<T>(_ operation: ObservableArrayOperation<T>) -> 
 ///  -> Updates are shifted by preceding inserts and deletes at lower indices
 /// Updates of inserted items are annihilated
 ///
-public func changeSetsFromBatchOperations<T>(_ operations: [ObservableArrayOperation<T>]) -> [ObservableArrayEventChangeSet] {
+public func changeSetsFromBatchOperations<T>(operations: [ObservableArrayOperation<T>]) -> [ObservableArrayEventChangeSet] {
   
   var inserts = Set<Int>()
   var updates = Set<Int>()
   var deletes = Set<Int>()
   
-  for (operationIndex, operation) in operations.enumerated() {
+  for (operationIndex, operation) in operations.enumerate() {
     switch operation {
-    case .insert(let elements, let fromIndex):
+    case .Insert(let elements, let fromIndex):
       // Inserts are always indexed in the index-space of the array as it will look like when all operations are applies
       
       // Inserts shift preceding inserts at higher indices
       inserts = Set(inserts.map { $0 >= fromIndex ? $0 + elements.count : $0 })
       
-      inserts.formUnion(fromIndex..<fromIndex+elements.count)
+      inserts.unionInPlace(fromIndex..<fromIndex+elements.count)
       
-    case .update(let elements, let fromIndex):
+    case .Update(let elements, let fromIndex):
       // Updates are always indexed in the index-space of the array before any operation is applied
 
       // Updates done to the elements that were inserted in this batch must be discared
-      var newUpdates = Array(Set(fromIndex..<fromIndex+elements.count).subtracting(inserts))
+      var newUpdates = Array(Set(fromIndex..<fromIndex+elements.count).subtract(inserts))
 
       // Any prior insertion or deletion shifts our indices
       for insert in inserts {
@@ -310,39 +310,39 @@ public func changeSetsFromBatchOperations<T>(_ operations: [ObservableArrayOpera
         newUpdates = newUpdates.map { $0 >= delete ? $0 + 1 : $0 }
       }
       
-      updates.formUnion(newUpdates)
+      updates.unionInPlace(newUpdates)
       
-    case .remove(let range):
+    case .Remove(let range):
       // Deletes are always indexed in the index-space of the array before any operation is applied
       
       let possibleNewDeletes = Set(range)
       
       // Elements that were inserted and then removed in this batch must be discared
-      let annihilated = inserts.intersection(possibleNewDeletes)
-      inserts.subtract(annihilated)
+      let annihilated = inserts.intersect(possibleNewDeletes)
+      inserts.subtractInPlace(annihilated)
       
-      let actualNewDeletes = possibleNewDeletes.subtracting(annihilated)
+      let actualNewDeletes = possibleNewDeletes.subtract(annihilated)
       
       // Deletes are shifted by preceding inserts and deletes at lower indices
       var correctionOffset = 0
-      for operation in operations.prefix(upTo: operationIndex) {
-        if range.lowerBound >= operationStartIndex(operation) {
+      for operation in operations.prefixUpTo(operationIndex) {
+        if range.startIndex >= operationStartIndex(operation) {
           correctionOffset -= operationOffset(operation)
         }
       }
       
       let newDeletes = actualNewDeletes.map { $0 + correctionOffset }
-      deletes.formUnion(newDeletes)
+      deletes.unionInPlace(newDeletes)
       
       // Elements that were updated and then removed in this batch must be discared
-      updates.subtract(newDeletes)
+      updates.subtractInPlace(newDeletes)
 
       // Deletes shift preceding inserts at higher indices
-      inserts = Set(inserts.map { $0 >= range.lowerBound ? $0 - range.count : $0 })
+      inserts = Set(inserts.map { $0 >= range.startIndex ? $0 - range.count : $0 })
       
-    case .reset:
+    case .Reset:
       fatalError("Dear Sir/Madam, the .Reset operation within the .Batch is not supported at the moment!")
-    case .batch:
+    case .Batch:
       fatalError("Dear Sir/Madam, nesting the .Batch operations is not supported at the moment!")
     }
   }
@@ -350,15 +350,15 @@ public func changeSetsFromBatchOperations<T>(_ operations: [ObservableArrayOpera
   var changeSets: [ObservableArrayEventChangeSet] = []
   
   if deletes.count > 0 {
-    changeSets.append(.deletes(deletes))
+    changeSets.append(.Deletes(deletes))
   }
   
   if inserts.count > 0 {
-    changeSets.append(.inserts(inserts))
+    changeSets.append(.Inserts(inserts))
   }
   
   if updates.count > 0 {
-    changeSets.append(.updates(updates))
+    changeSets.append(.Updates(updates))
   }
   
   return changeSets

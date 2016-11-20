@@ -13,10 +13,10 @@ This protocol needs to be implemented by any class that wants to be the target
 of the Timeline Component.
 */
 public protocol TimelineComponentTarget: class {
-  associatedtype ContentType
+  typealias ContentType
   
   /// Defines the range of the timeline that gets loaded initially.
-  var defaultRange: CountableRange<Int> { get }
+  var defaultRange: Range<Int> { get }
   /**
   Defines the additional amount of items that get loaded
   subsequently when a user reaches the last entry.
@@ -28,11 +28,11 @@ public protocol TimelineComponentTarget: class {
   This method should load the items within the specified range and call the
   `completionBlock`, with the items as argument, upon completion.
   */
-  func loadInRange(_ range: Range<Int>, completionBlock: ([ContentType]?) -> Void)
+  func loadInRange(range: Range<Int>, completionBlock: ([ContentType]?) -> Void)
 }
 
 protocol Refreshable {
-  func refresh(_ sender: AnyObject)
+  func refresh(sender: AnyObject)
 }
 
 /**
@@ -48,12 +48,12 @@ Apply following steps to use this class:
 2. Call the `loadInitialIfRequired()` when you want to load the Data Source's content for the first time
 3. Call `targetWillDisplayEntry(entryIndex:)` when a cell becomes visible
 */
-open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refreshable where S.ContentType == T {
+public class TimelineComponent <T: Equatable, S: TimelineComponentTarget where S.ContentType == T> : Refreshable {
   
   weak var target: S?
   var refreshControl: UIRefreshControl
   
-  var currentRange: CountableRange<Int> = 0...0
+  var currentRange: Range<Int> = 0...0
   var loadedAllContent = false
   var targetTrampoline: TargetTrampoline!
   
@@ -61,7 +61,7 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
   // MARK: Public Interface
   
   /// Stores the items that should be displayed in the Table View
-  open var content: [T] = []
+  public var content: [T] = []
   
   /**
   Creates a Timeline Component and connects it to its target.
@@ -72,13 +72,13 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
     self.target = target
     
     refreshControl = UIRefreshControl()
-    target.tableView.insertSubview(refreshControl, at:0)
+    target.tableView.insertSubview(refreshControl, atIndex:0)
     
     currentRange = target.defaultRange
     
     targetTrampoline = TargetTrampoline(target: self)
     
-    refreshControl.addTarget(targetTrampoline, action: #selector(TargetTrampoline.refresh(_:)), for: .valueChanged)
+    refreshControl.addTarget(targetTrampoline, action: "refresh:", forControlEvents: .ValueChanged)
   }
   
   /**
@@ -86,21 +86,21 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
   
   :param: object The object that shall be removed.
   */
-  open func removeObject(_ object: T) {
+  public func removeObject(object: T) {
     self.content.removeObject(object)
-    currentRange.upperBound = self.currentRange.upperBound - 1
+    currentRange.endIndex = self.currentRange.endIndex - 1
     target?.tableView.reloadData()
   }
   
   /**
   Triggers an initial request for data, if no data has been loaded so far.
   */
-  open func loadInitialIfRequired() {
+  public func loadInitialIfRequired() {
     // if no posts are currently loaded, load the default range
     if (content == []) {
       target!.loadInRange(target!.defaultRange) { posts in
         self.content = posts ?? []
-        self.currentRange.upperBound = self.content.count
+        self.currentRange.endIndex = self.content.count
         self.target!.tableView.reloadData()
       }
     }
@@ -112,13 +112,13 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
   
   :param: entryIndex The index of the cell that became visible
   */
-  open func targetWillDisplayEntry(_ entryIndex: Int) {
-    if (entryIndex == (currentRange.upperBound - 1) && !loadedAllContent) {
+  public func targetWillDisplayEntry(entryIndex: Int) {
+    if (entryIndex == (currentRange.endIndex - 1) && !loadedAllContent) {
       loadMore()
     }
   }
   
-  open func refresh(_ sender: AnyObject) {
+  public func refresh(sender: AnyObject) {
     currentRange = target!.defaultRange
     
     target!.loadInRange(target!.defaultRange) { content in
@@ -126,11 +126,11 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
       self.content = content! as [T]
       self.refreshControl.endRefreshing()
       
-      self.currentRange.upperBound = self.content.count
+      self.currentRange.endIndex = self.content.count
       
-      UIView.transition(with: self.target!.tableView,
+      UIView.transitionWithView(self.target!.tableView,
         duration: 0.35,
-        options: .transitionCrossDissolve,
+        options: .TransitionCrossDissolve,
         animations:
         { () -> Void in
           self.target!.tableView.reloadData()
@@ -143,7 +143,7 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
   // MARK: Internal Interface
   
   func loadMore() {
-    let additionalRange = (currentRange.upperBound ..< currentRange.upperBound + target!.additionalRangeSize)
+    let additionalRange = Range(start: currentRange.endIndex, end: currentRange.endIndex + target!.additionalRangeSize)
     
     target!.loadInRange(additionalRange) { posts in
       let newPosts = posts
@@ -153,7 +153,7 @@ open class TimelineComponent <T: Equatable, S: TimelineComponentTarget> : Refres
       }
       
       self.content = self.content + newPosts!
-      self.currentRange = (self.currentRange.lowerBound ..< self.content.count)
+      self.currentRange = Range(start: self.currentRange.startIndex, end: self.content.count)
       self.target!.tableView.reloadData()
     }
   }
@@ -173,7 +173,7 @@ class TargetTrampoline: NSObject, Refreshable {
     self.target = target
   }
   
-  func refresh(_ sender: AnyObject) {
+  func refresh(sender: AnyObject) {
     target.refresh(self)
   }
 }
